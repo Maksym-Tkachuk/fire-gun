@@ -28,6 +28,13 @@ export class Skeleton {
     const shade = 255 - (this.maxHp/10)*200;
     ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
     ctx.fillRect(this.x, this.y, this.w, this.h);
+
+    const barHeight = 3;
+    const barWidth = this.w;
+    const barX = this.x;
+    const barY = this.y - barHeight - 2;
+    ctx.fillStyle = 'red';
+    ctx.fillRect(barX, barY, barWidth * (this.hp / this.maxHp), barHeight);
   }
   tryAttack(now, player, spawnBloodEffect) {
     if (now - this.lastAttack < this.attackCD) return false;
