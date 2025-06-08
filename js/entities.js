@@ -78,7 +78,7 @@ export class Entity {
         let chance = this.maxHp <= 5 ? 0.1 : this.maxHp > 8 ? 0.3 : 0.2;
         const isMaxHit = Math.random() < chance;
         const dmg = isMaxHit ? 15 : Math.floor(Math.random() * 11) + 4;
-        player.hp = Math.max(0, player.hp - dmg);
+        player.takeDamage(dmg);
         spawnBloodEffect(player.x + player.w/2, player.y + player.h/2, dmg);
       }
     }
