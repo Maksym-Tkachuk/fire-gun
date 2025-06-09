@@ -59,7 +59,7 @@ function loop() {
 
   // оновлення
   if (!isEnd) {
-    player.update(keys, gameObjects);
+    player.update(keys, gameObjects, WIDTH, HEIGHT);
     enemies.forEach(e => e.update(player, gameObjects));
     bullets.forEach(b => b.update(gameObjects));
   }

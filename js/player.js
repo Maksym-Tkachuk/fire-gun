@@ -9,7 +9,7 @@ export class Player {
     this.lastDamage = performance.now();
     this.lastRegen  = performance.now();
   }
-  update(keys, mapObjects) {
+  update(keys, mapObjects, width, height) {
     const now = performance.now();
     let nx = this.x, ny = this.y;
     if (keys.ArrowLeft || keys.KeyA)  nx -= this.speed;
@@ -22,6 +22,12 @@ export class Player {
     if (!collidesWithMap(this.x, ny, this.w, this.h, mapObjects)) {
       this.y = ny;
     }
+
+    // wrap around screen when leaving bounds
+    if (this.x + this.w < 0) this.x = width;
+    else if (this.x > width) this.x = -this.w;
+    if (this.y + this.h < 0) this.y = height;
+    else if (this.y > height) this.y = -this.h;
 
     if (
       this.hp < this.maxHp &&

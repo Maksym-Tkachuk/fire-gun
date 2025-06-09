@@ -56,11 +56,7 @@ function openMap(objects) {
 export function createMap() {
   const objects = [];
 
-  // field boundaries
-  objects.push(new Environment('fence', 0,   0,   800, 32));
-  objects.push(new Environment('fence', 0,   568, 800, 32));
-  objects.push(new Environment('fence', 0,   0,   32,  600));
-  objects.push(new Environment('fence', 768, 0,   32,  600));
+  // no outer boundary fences
 
   const generators = [baseMap, forestMap, openMap];
   const gen = generators[Math.floor(Math.random()*generators.length)];
