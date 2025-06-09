@@ -8,9 +8,14 @@ class MainScene extends Phaser.Scene {
     this.kills = 0;
     this.totalEnemies = 0;
     this.gameOver = false;
+    this.startTime = 0;
   }
 
-  preload() {}
+  preload() {
+    for (let i = 1; i <= 4; i++) {
+      this.load.image(`tree${i}`, `assets/tree${i}.png`);
+    }
+  }
 
   create() {
     const width = this.scale.width;
@@ -20,15 +25,21 @@ class MainScene extends Phaser.Scene {
     this.environment = this.physics.add.staticGroup();
     const map = createMap();
     map.forEach(obj => {
-      const color = {
-        tree: 0x006400,
-        fence: 0x8b4513,
-        flower: 0xff00ff,
-        lake: 0x1e90ff
-      }[obj.type] || 0x808080;
-      const rect = this.add.rectangle(obj.x + obj.w/2, obj.y + obj.h/2, obj.w, obj.h, color);
-      this.physics.add.existing(rect, true);
-      this.environment.add(rect);
+      let item;
+      if (obj.type === 'tree') {
+        const tex = `tree${Phaser.Math.Between(1, 4)}`;
+        item = this.add.image(obj.x + obj.w/2, obj.y + obj.h/2, tex);
+        item.setDisplaySize(obj.w, obj.h);
+      } else {
+        const color = {
+          fence: 0x8b4513,
+          flower: 0xff00ff,
+          lake: 0x1e90ff
+        }[obj.type] || 0x808080;
+        item = this.add.rectangle(obj.x + obj.w/2, obj.y + obj.h/2, obj.w, obj.h, color);
+      }
+      this.physics.add.existing(item, true);
+      this.environment.add(item);
     });
 
     // player
@@ -77,10 +88,16 @@ class MainScene extends Phaser.Scene {
 
     this.spawnEnemies(10);
 
-    // UI
-    this.hpText = this.add.text(10, 10, '', { font: '16px sans-serif', color: '#ffffff' });
-    this.killText = this.add.text(10, 30, '', { font: '16px sans-serif', color: '#ffffff' });
+    // UI setup
     this.enemyHpGfx = this.add.graphics();
+    const barW = 100, barH = 15;
+    const barX = width - barW - 30, barY = 10;
+    this.hpBarBack = this.add.rectangle(barX, barY, barW, barH, 0x555555).setOrigin(0,0);
+    this.hpBarFill = this.add.rectangle(barX, barY, barW, barH, 0xff0000).setOrigin(0,0);
+    this.hpNumber = this.add.text(barX + barW, barY + barH + 4, '', { font:'14px sans-serif', color:'#ffffff' }).setOrigin(1,0);
+    this.killText = this.add.text(10, barY, '', { font:'20px sans-serif', color:'#ffffff' });
+    this.timerText = this.add.text(10, barY, '', { font:'20px sans-serif', color:'#ffffff' });
+    this.startTime = this.time.now;
     this.updateUI();
   }
 
@@ -89,10 +106,13 @@ class MainScene extends Phaser.Scene {
     for (let i = 0; i < count; i++) {
       const x = Phaser.Math.Between(0, this.scale.width - 28);
       const y = Phaser.Math.Between(0, this.scale.height - 28);
-      const enemy = this.add.rectangle(x, y, 28, 28, 0xaaaaaa);
+      const hp = Phaser.Math.Between(4, 10);
+      const shade = 255 - Math.round(((hp - 4) / 6) * 200);
+      const color = (shade << 16) | (shade << 8) | shade;
+      const enemy = this.add.rectangle(x, y, 28, 28, color);
       this.physics.add.existing(enemy);
-      enemy.hp = Phaser.Math.Between(4, 10);
-      enemy.maxHp = enemy.hp;
+      enemy.hp = hp;
+      enemy.maxHp = hp;
       enemy.speed = 40;
       this.enemies.add(enemy);
     }
@@ -107,6 +127,12 @@ class MainScene extends Phaser.Scene {
     if (this.cursors.up.isDown || this.wasd.W.isDown) body.setVelocityY(-speed);
     if (this.cursors.down.isDown || this.wasd.S.isDown) body.setVelocityY(speed);
     body.velocity.normalize().scale(speed);
+
+    // wrap around screen
+    if (this.player.x < -this.player.width/2) this.player.x = this.scale.width;
+    else if (this.player.x > this.scale.width + this.player.width/2) this.player.x = 0;
+    if (this.player.y < -this.player.height/2) this.player.y = this.scale.height;
+    else if (this.player.y > this.scale.height + this.player.height/2) this.player.y = 0;
 
     this.enemies.children.iterate(enemy => {
       if (!enemy) return;
@@ -152,12 +178,22 @@ class MainScene extends Phaser.Scene {
       this.enemyHpGfx.fillRect(x, y, bw * (enemy.hp / enemy.maxHp), bh);
     });
 
-    this.updateUI();
+    this.updateUI(time);
   }
 
-  updateUI() {
-    this.hpText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
-    this.killText.setText(`Kills: ${this.kills}/${this.totalEnemies}`);
+  updateUI(now = this.time.now) {
+    const percent = this.player.hp / this.player.maxHp;
+    this.hpBarFill.displayWidth = 100 * percent;
+    this.hpNumber.setText(`${this.player.hp}/${this.player.maxHp}`);
+
+    const elapsed = now - this.startTime;
+    const mins = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+    const secs = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+    const killText = `${this.kills}/${this.totalEnemies}`;
+    this.killText.setText(killText);
+    const killW = this.killText.width;
+    this.timerText.setPosition(10 + killW + 20, this.killText.y);
+    this.timerText.setText(`${mins}:${secs}`);
   }
 
   handleGameOver() {
