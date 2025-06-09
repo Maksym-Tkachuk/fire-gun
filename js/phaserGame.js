@@ -5,6 +5,9 @@ class MainScene extends Phaser.Scene {
     super('main');
     this.shooting = false;
     this.lastShot = 0;
+    this.kills = 0;
+    this.totalEnemies = 0;
+    this.gameOver = false;
   }
 
   preload() {}
@@ -44,13 +47,26 @@ class MainScene extends Phaser.Scene {
     this.physics.add.overlap(this.bullets, this.enemies, (bullet, enemy) => {
       enemy.hp -= 2;
       bullet.destroy();
-      if (enemy.hp <= 0) enemy.destroy();
+      if (enemy.hp <= 0) {
+        enemy.destroy();
+        this.kills += 1;
+        this.updateUI();
+        if (this.kills >= this.totalEnemies) {
+          this.add.text(this.scale.width/2, this.scale.height/2, 'Mission Complete!', { font: '32px sans-serif', color: '#ffffff' }).setOrigin(0.5);
+          this.scene.pause();
+        }
+      }
     });
     this.physics.add.overlap(this.enemies, this.player, (enemy) => {
       const now = this.time.now;
       if (!enemy.lastAttack || now - enemy.lastAttack > 1000) {
         enemy.lastAttack = now;
         this.player.hp -= 10;
+        if (this.player.hp <= 0) {
+          this.handleGameOver();
+        } else {
+          this.updateUI();
+        }
       }
     });
 
@@ -60,15 +76,23 @@ class MainScene extends Phaser.Scene {
     this.input.on('pointerup', () => this.shooting = false);
 
     this.spawnEnemies(10);
+
+    // UI
+    this.hpText = this.add.text(10, 10, '', { font: '16px sans-serif', color: '#ffffff' });
+    this.killText = this.add.text(10, 30, '', { font: '16px sans-serif', color: '#ffffff' });
+    this.enemyHpGfx = this.add.graphics();
+    this.updateUI();
   }
 
   spawnEnemies(count) {
+    this.totalEnemies = count;
     for (let i = 0; i < count; i++) {
       const x = Phaser.Math.Between(0, this.scale.width - 28);
       const y = Phaser.Math.Between(0, this.scale.height - 28);
       const enemy = this.add.rectangle(x, y, 28, 28, 0xaaaaaa);
       this.physics.add.existing(enemy);
       enemy.hp = Phaser.Math.Between(4, 10);
+      enemy.maxHp = enemy.hp;
       enemy.speed = 40;
       this.enemies.add(enemy);
     }
@@ -101,10 +125,46 @@ class MainScene extends Phaser.Scene {
       const len = Math.hypot(dx, dy) || 1;
       const bullet = this.add.rectangle(this.player.x, this.player.y, 6, 6, 0xffff00);
       this.physics.add.existing(bullet);
+      bullet.body.setAllowGravity(false);
+      bullet.body.setCollideWorldBounds(false);
       bullet.body.setVelocity((dx/len)*300, (dy/len)*300);
       this.bullets.add(bullet);
       this.lastShot = time;
     }
+
+    // remove bullets that left the screen
+    this.bullets.children.iterate(b => {
+      if (!b) return;
+      if (b.x < 0 || b.x > this.scale.width || b.y < 0 || b.y > this.scale.height) {
+        b.destroy();
+      }
+    });
+
+    // update enemy HP bars
+    this.enemyHpGfx.clear();
+    this.enemies.children.iterate(enemy => {
+      if (!enemy) return;
+      const bw = enemy.width;
+      const bh = 3;
+      const x = enemy.x - bw/2;
+      const y = enemy.y - enemy.height/2 - bh - 2;
+      this.enemyHpGfx.fillStyle(0xff0000, 1);
+      this.enemyHpGfx.fillRect(x, y, bw * (enemy.hp / enemy.maxHp), bh);
+    });
+
+    this.updateUI();
+  }
+
+  updateUI() {
+    this.hpText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
+    this.killText.setText(`Kills: ${this.kills}/${this.totalEnemies}`);
+  }
+
+  handleGameOver() {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    this.add.text(this.scale.width/2, this.scale.height/2, 'Game Over', { font: '32px sans-serif', color: '#ffffff' }).setOrigin(0.5);
+    this.scene.pause();
   }
 }
 
@@ -117,7 +177,8 @@ export function startGame() {
     height: 600,
     canvas: document.getElementById('gameCanvas'),
     physics: { default: 'arcade', arcade: { debug: false } },
-    scene: MainScene
+    scene: MainScene,
+    backgroundColor: 0x44aa88
   };
   new Phaser.Game(config);
 }
