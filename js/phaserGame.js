@@ -27,6 +27,17 @@ class MainScene extends Phaser.Scene {
   }
 
   create() {
+    // reset state when restarting
+    this.gameOver = false;
+    this.shooting = false;
+    this.lastShot = 0;
+    this.kills = 0;
+    this.totalEnemies = 0;
+    this.bloodParticles = [];
+    if (this.physics.world.isPaused) {
+      this.physics.resume();
+    }
+
     const width = this.scale.width;
     const height = this.scale.height;
 
