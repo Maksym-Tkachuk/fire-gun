@@ -5,9 +5,17 @@ class MainScene extends Phaser.Scene {
     super('main');
     this.shooting = false;
     this.lastShot = 0;
+    this.kills = 0;
+    this.totalEnemies = 0;
+    this.gameOver = false;
+    this.startTime = 0;
   }
 
-  preload() {}
+  preload() {
+    for (let i = 1; i <= 4; i++) {
+      this.load.image(`tree${i}`, `assets/tree${i}.png`);
+    }
+  }
 
   create() {
     const width = this.scale.width;
@@ -17,15 +25,21 @@ class MainScene extends Phaser.Scene {
     this.environment = this.physics.add.staticGroup();
     const map = createMap();
     map.forEach(obj => {
-      const color = {
-        tree: 0x006400,
-        fence: 0x8b4513,
-        flower: 0xff00ff,
-        lake: 0x1e90ff
-      }[obj.type] || 0x808080;
-      const rect = this.add.rectangle(obj.x + obj.w/2, obj.y + obj.h/2, obj.w, obj.h, color);
-      this.physics.add.existing(rect, true);
-      this.environment.add(rect);
+      let item;
+      if (obj.type === 'tree') {
+        const tex = `tree${Phaser.Math.Between(1, 4)}`;
+        item = this.add.image(obj.x + obj.w/2, obj.y + obj.h/2, tex);
+        item.setDisplaySize(obj.w, obj.h);
+      } else {
+        const color = {
+          fence: 0x8b4513,
+          flower: 0xff00ff,
+          lake: 0x1e90ff
+        }[obj.type] || 0x808080;
+        item = this.add.rectangle(obj.x + obj.w/2, obj.y + obj.h/2, obj.w, obj.h, color);
+      }
+      this.physics.add.existing(item, true);
+      this.environment.add(item);
     });
 
     // player
@@ -44,13 +58,26 @@ class MainScene extends Phaser.Scene {
     this.physics.add.overlap(this.bullets, this.enemies, (bullet, enemy) => {
       enemy.hp -= 2;
       bullet.destroy();
-      if (enemy.hp <= 0) enemy.destroy();
+      if (enemy.hp <= 0) {
+        enemy.destroy();
+        this.kills += 1;
+        this.updateUI();
+        if (this.kills >= this.totalEnemies) {
+          this.add.text(this.scale.width/2, this.scale.height/2, 'Mission Complete!', { font: '32px sans-serif', color: '#ffffff' }).setOrigin(0.5);
+          this.scene.pause();
+        }
+      }
     });
     this.physics.add.overlap(this.enemies, this.player, (enemy) => {
       const now = this.time.now;
       if (!enemy.lastAttack || now - enemy.lastAttack > 1000) {
         enemy.lastAttack = now;
         this.player.hp -= 10;
+        if (this.player.hp <= 0) {
+          this.handleGameOver();
+        } else {
+          this.updateUI();
+        }
       }
     });
 
@@ -60,15 +87,32 @@ class MainScene extends Phaser.Scene {
     this.input.on('pointerup', () => this.shooting = false);
 
     this.spawnEnemies(10);
+
+    // UI setup
+    this.enemyHpGfx = this.add.graphics();
+    const barW = 100, barH = 15;
+    const barX = width - barW - 30, barY = 10;
+    this.hpBarBack = this.add.rectangle(barX, barY, barW, barH, 0x555555).setOrigin(0,0);
+    this.hpBarFill = this.add.rectangle(barX, barY, barW, barH, 0xff0000).setOrigin(0,0);
+    this.hpNumber = this.add.text(barX + barW, barY + barH + 4, '', { font:'14px sans-serif', color:'#ffffff' }).setOrigin(1,0);
+    this.killText = this.add.text(10, barY, '', { font:'20px sans-serif', color:'#ffffff' });
+    this.timerText = this.add.text(10, barY, '', { font:'20px sans-serif', color:'#ffffff' });
+    this.startTime = this.time.now;
+    this.updateUI();
   }
 
   spawnEnemies(count) {
+    this.totalEnemies = count;
     for (let i = 0; i < count; i++) {
       const x = Phaser.Math.Between(0, this.scale.width - 28);
       const y = Phaser.Math.Between(0, this.scale.height - 28);
-      const enemy = this.add.rectangle(x, y, 28, 28, 0xaaaaaa);
+      const hp = Phaser.Math.Between(4, 10);
+      const shade = 255 - Math.round(((hp - 4) / 6) * 200);
+      const color = (shade << 16) | (shade << 8) | shade;
+      const enemy = this.add.rectangle(x, y, 28, 28, color);
       this.physics.add.existing(enemy);
-      enemy.hp = Phaser.Math.Between(4, 10);
+      enemy.hp = hp;
+      enemy.maxHp = hp;
       enemy.speed = 40;
       this.enemies.add(enemy);
     }
@@ -83,6 +127,12 @@ class MainScene extends Phaser.Scene {
     if (this.cursors.up.isDown || this.wasd.W.isDown) body.setVelocityY(-speed);
     if (this.cursors.down.isDown || this.wasd.S.isDown) body.setVelocityY(speed);
     body.velocity.normalize().scale(speed);
+
+    // wrap around screen
+    if (this.player.x < -this.player.width/2) this.player.x = this.scale.width;
+    else if (this.player.x > this.scale.width + this.player.width/2) this.player.x = 0;
+    if (this.player.y < -this.player.height/2) this.player.y = this.scale.height;
+    else if (this.player.y > this.scale.height + this.player.height/2) this.player.y = 0;
 
     this.enemies.children.iterate(enemy => {
       if (!enemy) return;
@@ -101,10 +151,56 @@ class MainScene extends Phaser.Scene {
       const len = Math.hypot(dx, dy) || 1;
       const bullet = this.add.rectangle(this.player.x, this.player.y, 6, 6, 0xffff00);
       this.physics.add.existing(bullet);
+      bullet.body.setAllowGravity(false);
+      bullet.body.setCollideWorldBounds(false);
       bullet.body.setVelocity((dx/len)*300, (dy/len)*300);
       this.bullets.add(bullet);
       this.lastShot = time;
     }
+
+    // remove bullets that left the screen
+    this.bullets.children.iterate(b => {
+      if (!b) return;
+      if (b.x < 0 || b.x > this.scale.width || b.y < 0 || b.y > this.scale.height) {
+        b.destroy();
+      }
+    });
+
+    // update enemy HP bars
+    this.enemyHpGfx.clear();
+    this.enemies.children.iterate(enemy => {
+      if (!enemy) return;
+      const bw = enemy.width;
+      const bh = 3;
+      const x = enemy.x - bw/2;
+      const y = enemy.y - enemy.height/2 - bh - 2;
+      this.enemyHpGfx.fillStyle(0xff0000, 1);
+      this.enemyHpGfx.fillRect(x, y, bw * (enemy.hp / enemy.maxHp), bh);
+    });
+
+    this.updateUI(time);
+  }
+
+  updateUI(now = this.time.now) {
+    const percent = this.player.hp / this.player.maxHp;
+    this.hpBarFill.displayWidth = 100 * percent;
+    this.hpNumber.setText(`${this.player.hp}/${this.player.maxHp}`);
+
+    const elapsed = now - this.startTime;
+    const mins = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+    const secs = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+    const killText = `${this.kills}/${this.totalEnemies}`;
+    this.killText.setText(killText);
+    const killW = this.killText.width;
+    this.timerText.setPosition(10 + killW + 20, this.killText.y);
+    this.timerText.setText(`${mins}:${secs}`);
+  }
+
+  handleGameOver() {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    this.add.text(this.scale.width/2, this.scale.height/2, 'Game Over', { font: '32px sans-serif', color: '#ffffff' }).setOrigin(0.5);
+    this.scene.pause();
   }
 }
 
@@ -117,7 +213,8 @@ export function startGame() {
     height: 600,
     canvas: document.getElementById('gameCanvas'),
     physics: { default: 'arcade', arcade: { debug: false } },
-    scene: MainScene
+    scene: MainScene,
+    backgroundColor: 0x44aa88
   };
   new Phaser.Game(config);
 }
