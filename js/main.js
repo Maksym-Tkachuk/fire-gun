@@ -24,7 +24,10 @@ function spawnEnemies(count = 10) {
   while (spawned < count) {
     const x = Math.random() * (WIDTH - 28);
     const y = Math.random() * (HEIGHT - 28);
-    if (!collidesWithMap(x, y, 28, 28, gameObjects)) {
+    if (
+      !collidesWithMap(x, y, 28, 28, gameObjects) &&
+      !isColliding({ x, y, w: 28, h: 28 }, player)
+    ) {
       enemies.push(new Skeleton(x, y, Math.ceil(Math.random() * 10)));
       spawned++;
     }
