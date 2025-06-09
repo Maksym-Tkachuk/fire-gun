@@ -9,3 +9,8 @@ enemies.
 The battlefield now has several layouts that are picked at random. Each
 layout contains fewer obstacles so the player always spawns in a clear
 area and enemies have more room to move.
+
+## Boundless movement
+
+Leaving the screen now wraps the player to the opposite side, removing the
+blocking fence around the arena.
