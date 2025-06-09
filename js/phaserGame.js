@@ -24,6 +24,13 @@ class MainScene extends Phaser.Scene {
       tex.context.fillRect(0, 0, 1, 1);
       tex.refresh();
     }
+    // 1x1 white texture for bullets
+    if (!this.textures.exists('bulletPixel')) {
+      const tex = this.textures.createCanvas('bulletPixel', 1, 1);
+      tex.context.fillStyle = '#ffffff';
+      tex.context.fillRect(0, 0, 1, 1);
+      tex.refresh();
+    }
   }
 
   create() {
@@ -197,12 +204,15 @@ class MainScene extends Phaser.Scene {
       const dx = pointer.worldX - this.player.x;
       const dy = pointer.worldY - this.player.y;
       const len = Math.hypot(dx, dy) || 1;
-      const bullet = this.add.rectangle(this.player.x, this.player.y, 6, 6, 0xffff00);
-      this.physics.add.existing(bullet);
-      bullet.body.setAllowGravity(false);
-      bullet.body.setCollideWorldBounds(false);
-      bullet.body.setVelocity((dx/len)*300, (dy/len)*300);
+
+      const bullet = this.physics.add.image(this.player.x, this.player.y, 'bulletPixel');
+      bullet.setDisplaySize(6, 6);
+      bullet.setTint(0xffff00);
+      bullet.setAllowGravity(false);
+      bullet.setCollideWorldBounds(false);
+      bullet.setVelocity((dx / len) * 300, (dy / len) * 300);
       this.bullets.add(bullet);
+
       this.lastShot = time;
     }
 
