@@ -208,7 +208,8 @@ class MainScene extends Phaser.Scene {
       const bullet = this.physics.add.image(this.player.x, this.player.y, 'bulletPixel');
       bullet.setDisplaySize(6, 6);
       bullet.setTint(0xffff00);
-      bullet.setAllowGravity(false);
+      // Disable gravity on the bullet's physics body so it travels straight
+      bullet.body.setAllowGravity(false);
       bullet.setCollideWorldBounds(false);
       bullet.setVelocity((dx / len) * 300, (dy / len) * 300);
       this.bullets.add(bullet);
