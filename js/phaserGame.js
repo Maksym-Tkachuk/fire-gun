@@ -29,7 +29,8 @@ class MainScene extends Phaser.Scene {
     });
 
     // player
-    this.player = this.physics.add.rectangle(width/2, height/2, 32, 32, 0x4169e1);
+    this.player = this.add.rectangle(width/2, height/2, 32, 32, 0x4169e1);
+    this.physics.add.existing(this.player);
     this.player.hp = 100;
     this.player.maxHp = 100;
 
@@ -65,7 +66,8 @@ class MainScene extends Phaser.Scene {
     for (let i = 0; i < count; i++) {
       const x = Phaser.Math.Between(0, this.scale.width - 28);
       const y = Phaser.Math.Between(0, this.scale.height - 28);
-      const enemy = this.physics.add.rectangle(x, y, 28, 28, 0xaaaaaa);
+      const enemy = this.add.rectangle(x, y, 28, 28, 0xaaaaaa);
+      this.physics.add.existing(enemy);
       enemy.hp = Phaser.Math.Between(4, 10);
       enemy.speed = 40;
       this.enemies.add(enemy);
@@ -97,7 +99,8 @@ class MainScene extends Phaser.Scene {
       const dx = pointer.worldX - this.player.x;
       const dy = pointer.worldY - this.player.y;
       const len = Math.hypot(dx, dy) || 1;
-      const bullet = this.physics.add.rectangle(this.player.x, this.player.y, 6, 6, 0xffff00);
+      const bullet = this.add.rectangle(this.player.x, this.player.y, 6, 6, 0xffff00);
+      this.physics.add.existing(bullet);
       bullet.body.setVelocity((dx/len)*300, (dy/len)*300);
       this.bullets.add(bullet);
       this.lastShot = time;
@@ -107,7 +110,10 @@ class MainScene extends Phaser.Scene {
 
 export function startGame() {
   const config = {
-    type: Phaser.AUTO,
+    // Phaser treats Node or headless setups as a custom environment.
+    // Specify the renderer explicitly in such cases.
+    type: Phaser.WEBGL,
+    renderType: Phaser.WEBGL,
     width: 800,
     height: 600,
     canvas: document.getElementById('gameCanvas'),
