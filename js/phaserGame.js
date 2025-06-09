@@ -18,10 +18,12 @@ class MainScene extends Phaser.Scene {
       this.load.image(`tree${i}`, `assets/tree${i}.png`);
     }
     // simple 1x1 red texture for particles
-    const tex = this.textures.createCanvas('pixel', 1, 1);
-    tex.context.fillStyle = '#ff0000';
-    tex.context.fillRect(0, 0, 1, 1);
-    tex.refresh();
+    if (!this.textures.exists('pixel')) {
+      const tex = this.textures.createCanvas('pixel', 1, 1);
+      tex.context.fillStyle = '#ff0000';
+      tex.context.fillRect(0, 0, 1, 1);
+      tex.refresh();
+    }
   }
 
   create() {
