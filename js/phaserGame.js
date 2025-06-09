@@ -111,7 +111,6 @@ class MainScene extends Phaser.Scene {
 export function startGame() {
   const config = {
     // Phaser treats Node or headless setups as a custom environment.
-    // Specify the renderer explicitly in such cases.
     type: Phaser.WEBGL,
     renderType: Phaser.WEBGL,
     width: 800,
