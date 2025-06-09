@@ -1,4 +1,4 @@
-// js/environment.js
+// environment.js
 
 // preload tree textures
 const treeTextures = [];
@@ -16,7 +16,7 @@ export class Environment {
     this.w = w;
     this.h = h;
 
-    // якщо це дерево — обрати текстуру один раз, щоб уникнути мерехтіння
+    // choose the texture only once for trees to avoid flicker
     if (this.type === 'tree') {
       this.texture = treeTextures[
         Math.floor(Math.random() * treeTextures.length)
@@ -30,13 +30,16 @@ export class Environment {
       return;
     }
 
-    // fallback для інших типів
+    // fallback for other types
     switch (this.type) {
       case 'fence':
         ctx.fillStyle = 'sienna';
         break;
       case 'flower':
         ctx.fillStyle = 'magenta';
+        break;
+      case 'lake':
+        ctx.fillStyle = 'deepskyblue';
         break;
       default:
         ctx.fillStyle = 'gray';
