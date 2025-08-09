@@ -76,7 +76,8 @@ class MainScene extends Phaser.Scene {
     this.player.maxHp = 100;
 
     // groups
-    this.bullets = this.physics.add.group();
+    // Disable gravity for all bullets so they don't drop after being fired
+    this.bullets = this.physics.add.group({ allowGravity: false });
     this.enemies = this.physics.add.group();
 
     this.physics.add.collider(this.player, this.environment);
@@ -205,14 +206,12 @@ class MainScene extends Phaser.Scene {
       const dy = pointer.worldY - this.player.y;
       const len = Math.hypot(dx, dy) || 1;
 
-      const bullet = this.physics.add.image(this.player.x, this.player.y, 'bulletPixel');
+      // create bullet within the group so it inherits allowGravity: false
+      const bullet = this.bullets.create(this.player.x, this.player.y, 'bulletPixel');
       bullet.setDisplaySize(6, 6);
       bullet.setTint(0xffff00);
-      // Disable gravity on the bullet's physics body so it travels straight
-      bullet.body.setAllowGravity(false);
       bullet.body.setCollideWorldBounds(false);
       bullet.body.setVelocity((dx / len) * 300, (dy / len) * 300);
-      this.bullets.add(bullet);
 
       this.lastShot = time;
     }
